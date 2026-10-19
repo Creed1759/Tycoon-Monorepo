@@ -9,6 +9,7 @@ import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { LoggerService } from './common/logger/logger.service';
 import { configureApiVersioning } from './common/versioning/api-versioning';
+import { buildHelmetOptions } from './config/helmet.config';
 import { GamesIoAdapter } from './modules/games/realtime/games-io.adapter';
 import { GamesWsMetrics } from './modules/games/realtime/games-ws-metrics.service';
 
@@ -37,6 +38,11 @@ async function bootstrap() {
   // Security headers — see common/security/helmet-options.ts for full rationale
   // and docs/security/REVERSE_PROXY_HEADERS.md for the reverse-proxy split.
   app.use(helmet(buildHelmetOptions(configService)));
+  // Security headers — see config/helmet.config.ts for the tuned options.
+  const isProduction =
+    configService.get<string>('app.nodeEnv') === 'production';
+
+  app.use(helmet(buildHelmetOptions(isProduction)));
 
   // Trust proxy
   if (configService.get<boolean>('app.trustProxy')) {
@@ -153,50 +159,6 @@ async function bootstrap() {
   // API versioning + compatibility
   const { apiPrefix } = configureApiVersioning(app, {
     apiPrefix: configService.get<string>('app.apiPrefix') || 'api',
-    defaultVersion: configService.get<string>('app.defaultApiVersion') || '1',
-    enableLegacyUnversionedRoutes:
-      configService.get<boolean>('app.enableLegacyUnversionedRoutes') ?? true,
-    legacyUnversionedSunset:
-      configService.get<string>('app.legacyUnversionedSunset') || undefined,
-  });
+    defaultVe
 
-  // Swagger/OpenAPI setup (dev/staging only)
-  const swaggerEnabled =
-    configService.get<string>('app.nodeEnv') !== 'production' ||
-    process.env.ENABLE_SWAGGER === 'true';
-  if (swaggerEnabled) {
-    const swaggerConfig = new DocumentBuilder()
-      .setTitle('Tycoon API')
-      .setDescription('Tycoon Monorepo Backend API - OpenAPI 3.0')
-      .setVersion('1.0')
-      .addBearerAuth(
-        { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
-        'JWT-auth',
-      )
-      .build();
-    const document = SwaggerModule.createDocument(app, swaggerConfig);
-    SwaggerModule.setup(`${apiPrefix}/docs`, app, document, {
-      swaggerOptions: { persistAuthorization: true },
-    });
-    const tempLogger = app.get(LoggerService);
-    tempLogger.log(
-      `📚 Swagger UI: http://localhost:${port}/${apiPrefix}/docs`,
-      'Bootstrap',
-    );
-  }
-
-  const logger = app.get(LoggerService);
-
-  await app.listen(port);
-  logger.log(
-    `🚀 Application is running on: http://localhost:${port}`,
-    'Bootstrap',
-  );
-  // API Documentation log moved to Swagger setup
-  logger.log(
-    `Environment: ${configService.get<string>('app.environment') || 'development'}`,
-    'Bootstrap',
-  );
-  logger.log(`Log Level: ${process.env.LOG_LEVEL || 'default'}`, 'Bootstrap');
-}
-void bootstrap();
+/* … truncated 1593 chars — edit only what you need near the top … */
